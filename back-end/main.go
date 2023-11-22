@@ -1,15 +1,24 @@
 package main
 
 import (
-	"database/sql"
 	"log"
 	"net/http"
+	"time"
 
 	_ "github.com/lib/pq"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
+
+type Memo struct {
+	ID        uint      `gorm:"primarykey" json:"id"`
+	CreatedAt time.Time `gorm:"not null" json:"created_at"`
+	Title     string    `gorm:"size:255;not null" json:"title"`
+	Detail    string    `gorm:"type:text;not null" json:"detail"`
+}
 
 func main() {
     e := echo.New()
@@ -20,24 +29,34 @@ func main() {
         AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept},
     }))
 
-    connStr := "host=/tmp port=5432 user=kim_muhyeon dbname=postgres sslmode=disable"
-    db, err := sql.Open("postgres", connStr)
+    dsn := "host=/tmp user=root dbname=memo sslmode=disable"
+    db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
     if err != nil {
-        log.Fatal(err)
-    }
-    defer db.Close()
-
-    err = db.Ping()
-    if err != nil {
-        log.Fatal("Database not connected", err)
+        panic("failed to connect database")
+    }else{
+        log.Println("✅Success to connect db💻");
     }
 
-    e.GET("/", func(c echo.Context) error {
-        data := map[string]interface{}{
-            "id": 1,
-            "message": "Hello, World!",
+    db.AutoMigrate(&Memo{})
+    
+
+    e.GET("/memos", func(c echo.Context) error {
+        var memos []Memo
+        if result := db.Find(&memos); result.Error !=nil {
+            return echo.NewHTTPError(http.StatusInternalServerError, result.Error.Error())
         }
-        return c.JSON(http.StatusOK, data)
+        return c.JSON(http.StatusOK, memos)
+    })
+
+    e.POST("/memo/upload", func(c echo.Context) error{
+        var newMemo Memo
+        if err := c.Bind(&newMemo); err !=nil {
+            return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+        }
+        if result := db.Create(&newMemo); err != nil {
+            return echo.NewHTTPError(http.StatusInternalServerError, result.Error.Error())
+        }
+        return c.JSON(http.StatusCreated, newMemo)
     })
     
     e.Logger.Fatal(e.Start(":1323"))
