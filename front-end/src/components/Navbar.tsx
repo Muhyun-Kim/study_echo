@@ -9,7 +9,7 @@ const Navbar = () => {
           <a href="/login">Login</a>
         </li>
         <li className="ml-4">
-          <a href="/memo/upload">Upload</a>
+          <a href="/memos/upload">Upload</a>
         </li>
       </ul>
     </nav>

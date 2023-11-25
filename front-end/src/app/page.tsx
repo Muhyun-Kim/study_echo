@@ -1,12 +1,13 @@
 "use client";
 
+import NextLink from "next/link";
 import { useEffect, useState } from "react";
 
 type Memo = {
   id: number;
   title: string;
   detail: string;
-  created_at: any;
+  created_at: string;
 };
 
 function formatCreatedAt(dateString: string): string {
@@ -38,15 +39,25 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="m-4 w-96">
-      <ul>
-        {/* 메시지 배열을 순회하며 각 메시지를 리스트 아이템으로 표시합니다. */}
+    <div className="m-4 w-1/2">
+      <ul className="flex">
         {memos.map((memo) => (
-          <li key={memo.id}>
-            <h1>{memo.title}</h1>
-            <p>{memo.detail}</p>
-            <p>{formatCreatedAt(memo.created_at)}</p>
-          </li>
+          <NextLink
+            href={`/memos/${memo.id}`}
+            className="mr-4 p-4 w-1/3 rounded-lg border border-slate-200 bg-slate-800 text-white"
+          >
+            <li key={memo.id}>
+              <h1 className="mb-4 py-1 px-2 font-bold rounded-md bg-slate-600">
+                {memo.title}
+              </h1>
+              <p className="my-4 py-1 px-2 rounded-md bg-slate-600">
+                {memo.detail}
+              </p>
+              <p className="mt-4 py-1 px-2 rounded-md bg-slate-600 text-xs">
+                {formatCreatedAt(memo.created_at)}
+              </p>
+            </li>
+          </NextLink>
         ))}
       </ul>
     </div>

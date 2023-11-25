@@ -1,8 +1,10 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -14,10 +16,10 @@ import (
 )
 
 type Memo struct {
-	ID        uint      `gorm:"primarykey" json:"id"`
-	CreatedAt time.Time `gorm:"not null" json:"created_at"`
-	Title     string    `gorm:"size:255;not null" json:"title"`
-	Detail    string    `gorm:"type:text;not null" json:"detail"`
+	ID        uint      `json:"id"          gorm:"primarykey"`
+	CreatedAt time.Time `json:"created_at"  gorm:"not null"`
+	Title     string    `json:"title"       gorm:"size:255;not null" `
+	Detail    string    `json:"detail"      gorm:"type:text;not null" `
 }
 
 func main() {
@@ -25,7 +27,7 @@ func main() {
 
     e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
         AllowOrigins: []string{"http://localhost:3000"},
-        AllowMethods: []string{echo.GET, echo.PUT, echo.POST, echo.DELETE},
+        AllowMethods: []string{echo.GET, echo.PUT, echo.POST, echo.DELETE, echo.PATCH},
         AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept},
     }))
 
@@ -38,15 +40,6 @@ func main() {
     }
 
     db.AutoMigrate(&Memo{})
-    
-
-    e.GET("/memos", func(c echo.Context) error {
-        var memos []Memo
-        if result := db.Find(&memos); result.Error !=nil {
-            return echo.NewHTTPError(http.StatusInternalServerError, result.Error.Error())
-        }
-        return c.JSON(http.StatusOK, memos)
-    })
 
     e.POST("/memo/upload", func(c echo.Context) error{
         var newMemo Memo
@@ -57,6 +50,84 @@ func main() {
             return echo.NewHTTPError(http.StatusInternalServerError, result.Error.Error())
         }
         return c.JSON(http.StatusCreated, newMemo)
+    })
+
+    e.GET("/memos", func(c echo.Context) error {
+        var memos []Memo
+        if result := db.Find(&memos); result.Error !=nil {
+            return echo.NewHTTPError(http.StatusInternalServerError, result.Error.Error())
+        }
+        return c.JSON(http.StatusOK, memos)
+    })
+
+    e.GET("/memos/:id", func(c echo.Context) error {
+        id := c.Param("id")
+        var memo Memo
+    
+        var uintID uint
+        if parsedID, err := strconv.ParseUint(id, 10, 32); err != nil {
+            return echo.NewHTTPError(http.StatusBadRequest, "Invalid memo ID")
+        } else {
+            uintID = uint(parsedID)
+        }
+    
+        result := db.First(&memo, uintID)
+        if result.Error != nil {
+            if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+                return echo.NewHTTPError(http.StatusNotFound, "Memo not found")
+            }
+            return echo.NewHTTPError(http.StatusInternalServerError, result.Error.Error())
+        }
+    
+        return c.JSON(http.StatusOK, memo)
+    })
+
+    e.PATCH("/memos/:id", func(c echo.Context) error {
+        idParam := c.Param("id")
+        var uintID uint
+        var parsedID uint64
+        var err error
+        if parsedID, err = strconv.ParseUint(idParam, 10, 32); err != nil {
+            return echo.NewHTTPError(http.StatusBadRequest, "Invalid memo ID")
+        }
+        uintID = uint(parsedID)
+    
+        var updateData Memo
+        if err := c.Bind(&updateData); err != nil {
+            return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+        }
+    
+        var memo Memo
+        if result := db.First(&memo, uintID); result.Error != nil {
+            return echo.NewHTTPError(http.StatusNotFound, "Memo not found")
+        }
+    
+        result := db.Model(&memo).Updates(updateData)
+        if result.Error != nil {
+            return echo.NewHTTPError(http.StatusInternalServerError, result.Error.Error())
+        }
+    
+        return c.JSON(http.StatusOK, memo)
+    })
+
+    e.DELETE("memos/:id", func(c echo.Context) error{
+        idParam := c.Param("id")
+        var uintID uint
+        var parsedID uint64
+        var err error
+        if parsedID, err = strconv.ParseUint(idParam, 10, 32); err !=nil {
+            return echo.NewHTTPError(http.StatusBadRequest, "Invalid memo ID")
+        }
+        uintID = uint(parsedID)
+
+        result := db.Delete(&Memo{}, uintID)
+        if result.Error != nil{
+            if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+                return echo.NewHTTPError(http.StatusNotFound, "Memo not found")
+            }
+            return echo.NewHTTPError(http.StatusInternalServerError, result.Error.Error())
+        }
+        return c.JSON(http.StatusOK, map[string]string{"message": "Memo deleted successfully"})
     })
     
     e.Logger.Fatal(e.Start(":1323"))
