@@ -1,17 +1,11 @@
 "use client";
 
+import { deleteMemo, getMemo, updateMemo } from "@/controllers/memo_controller";
+import { Memo } from "@/models/memo_model";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-type Memo = {
-  id: number;
-  title: string;
-  detail: string;
-  createdAt: string;
-};
-
 export default function MemoDetail() {
-  const [memo, setMemo] = useState<Memo | null>(null);
   const [title, setTitle] = useState<string>("");
   const [detail, setDetail] = useState<string>("");
   const router = useRouter();
@@ -22,13 +16,7 @@ export default function MemoDetail() {
   useEffect(() => {
     const fetchMemo = async () => {
       try {
-        const response = await fetch(`http://localhost:1323/memos/${id}`);
-        if (!response.ok) {
-          throw new Error("Memo not found");
-        }
-        const data: Memo = await response.json();
-        setMemo(data);
-        setMemo(data);
+        const data: Memo = await getMemo(id);
         setTitle(data.title);
         setDetail(data.detail);
       } catch (err) {
@@ -41,17 +29,7 @@ export default function MemoDetail() {
   const handleUpdate = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
-      const response = await fetch(`http://localhost:1323/memos/${id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ title, detail }),
-      });
-      if (!response.ok) {
-        throw new Error("Memo update failed");
-      }
-      console.log("Memo updated successfully");
+      await updateMemo(id, { title, detail });
     } catch (e: unknown) {
       if (e instanceof Error) {
         console.log(e.message);
@@ -64,15 +42,13 @@ export default function MemoDetail() {
     if (!confirm("本当に削除しますか？")) return;
 
     try {
-      const response = await fetch(`http://localhost:1323/memos/${id}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) {
-        throw new Error("Memo deletion failed");
-      }
-      console.log("Memo deleted successfully");
+      await deleteMemo(id);
       router.push("/");
-    } catch (e: unknown) {}
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        console.log(e.message);
+      }
+    }
   };
 
   return (
