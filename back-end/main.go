@@ -32,8 +32,10 @@ func main() {
     }
 
     database.AutoMigrate(&models.Memo{})
+    database.AutoMigrate(&models.User{})
 
-    router.RegisterRoutes(e, database)
+    router.MemoRegisterRoutes(e, database)
+    router.UserRegisterRoutes(e, database)
     
     e.Logger.Fatal(e.Start(":1323"))
 }

@@ -18,6 +18,7 @@ function formatCreatedAt(dateString: string): string {
 
 export default function Home() {
   const [memos, setMemos] = useState<Memo[]>([]);
+  const [sortNewest, setSortNewest] = useState<boolean>(true);
 
   useEffect(() => {
     async function getMemos() {
@@ -27,8 +28,26 @@ export default function Home() {
     getMemos();
   }, []);
 
+  const handleSortChange = () => {
+    setSortNewest(!sortNewest);
+    setMemos((prevMemos) => {
+      return [...prevMemos].sort((a, b) => {
+        console.log("a:", a, "b:", b);
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return sortNewest ? dateB - dateA : dateA - dateB;
+      });
+    });
+  };
+
   return (
     <div className="m-4 w-1/2">
+      <button
+        className="mb-4 px-4 py-1 rounded-lg border border-slate-200 bg-slate-800"
+        onClick={handleSortChange}
+      >
+        {sortNewest ? "昇順" : "降順"}
+      </button>
       <ul className="flex">
         {memos.map((memo) => (
           <NextLink
