@@ -17,4 +17,6 @@ func MemoRegisterRoutes(e *echo.Echo, db *gorm.DB){
 
 func UserRegisterRoutes(e *echo.Echo, db *gorm.DB){
 	e.POST("/user/create", controllers.CreateUser(db))
+	e.POST("/user/login", controllers.LoginUser(db))
+	
 }
